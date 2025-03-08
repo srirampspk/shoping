@@ -1,0 +1,240 @@
+const express = require('express');
+const mysql = require('mysql2/promise');
+const path = require('path');
+const fs = require('fs');
+const cors = require('cors');
+
+const app = express();
+
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+// Enable CORS
+app.use(cors());
+
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Define the base path for images
+const imagePath = 'C:\\Users\\91868\\OneDrive\\Documents\\Desktop\\imagedatabase';
+
+// MySQL connection configuration
+let db;
+(async () => {
+    try {
+        db = await mysql.createConnection({
+            host: 'localhost',
+            user: 'root',
+            password: 'Sriram@92',
+            database: 'sys'
+        });
+        console.log('Database connected successfully');
+    } catch (err) {
+        console.error('Database connection failed:', err);
+        process.exit(1);
+    }
+})();
+
+// Endpoint to insert an image
+app.post('/insert_image', async (req, res) => {
+    const { id, price, color, imageFile } = req.body;
+
+    // Construct the full path for the image file
+    const imagePathWithFilename = path.join(imagePath, imageFile);
+    const imageBuffer = fs.readFileSync(imagePathWithFilename);
+
+    const sql = 'INSERT INTO sys.shoping (id, image, price, color) VALUES (?, ?, ?, ?)';
+    try {
+        await db.execute(sql, [id, imageBuffer, price, color]);
+        res.status(201).send({ message: 'Item inserted successfully' });
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+// Endpoint to delete an image
+app.post('/delete_image', async (req, res) => {
+    const { id } = req.body;
+
+    const sql = 'SELECT image FROM sys.shoping WHERE id = ?';
+    try {
+        const [rows] = await db.execute(sql, [id]);
+        if (rows.length === 0) {
+            res.status(404).send({ message: 'No matching record found' });
+            return;
+        }
+
+        const deleteSql = 'DELETE FROM sys.shoping WHERE id = ?';
+        await db.execute(deleteSql, [id]);
+        res.status(200).send({ message: 'Item deleted successfully' });
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+// Endpoint to retrieve shoping data
+app.get('/shoping', async (req, res) => {
+    const sql = 'SELECT * FROM shoping';
+    try {
+        const [rows] = await db.execute(sql);
+        res.status(200).json(rows);
+    } catch (err) {
+        res.status(500).send(err);
+    }
+});
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Shoping Data</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <h1>Manage Shoping Data</h1>
+    
+    <form id="insertForm">
+        <h2>Insert New Item</h2>
+        <label for="id">ID:</label>
+        <input type="text" id="id" name="id" required><br>
+        
+        <label for="price">Price:</label>
+        <input type="text" id="price" name="price" required><br>
+        
+        <label for="color">Color:</label>
+        <input type="text" id="color" name="color" required><br>
+        
+        <label for="imageFile">Image File Name:</label>
+        <input type="text" id="imageFile" name="imageFile" required><br>
+        
+        <button type="submit">Insert</button>
+    </form>
+
+    <form id="deleteForm">
+        <h2>Delete Item</h2>
+        <label for="deleteId">ID:</label>
+        <input type="text" id="deleteId" name="deleteId" required><br>
+        
+        <button type="submit">Delete</button>
+    </form>
+
+    <div id="message"></div>
+
+    <script src="index.js"></script>
+</body>
+</html>
+document.getElementById('insertForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('id').value;
+    const price = document.getElementById('price').value;
+    const color = document.getElementById('color').value;
+    const imageFile = document.getElementById('imageFile').value;
+
+    try {
+        const response = await fetch('http://localhost:3000/insert_image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id, price, color, imageFile })
+        });
+        const result = await response.json();
+        document.getElementById('message').textContent = result.message || 'Item inserted successfully';
+    } catch (error) {
+        console.error('Error inserting item:', error);
+        document.getElementById('message').textContent = 'Error inserting item';
+    }
+});
+
+document.getElementById('deleteForm').addEventListener('submit', async function(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('deleteId').value;
+
+    try {
+        const response = await fetch('http://localhost:3000/delete_image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id })
+        });
+        const result = await response.json();
+        document.getElementById('message').textContent = result.message || 'Item deleted successfully';
+    } catch (error) {
+        console.error('Error deleting item:', error);
+        document.getElementById('message').textContent = 'Error deleting item';
+    }
+});
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shoping Data</title>
+    <link rel="stylesheet" href="user.css">
+</head>
+<body>
+    <h1>Shoping Data</h1>
+    
+    <div id="shopingData"></div>
+    
+    <script src="user.js"></script>
+</body>
+</html>
+// Retrieve shoping data from the server
+async function fetchShopingData() {
+    try {
+        const response = await fetch('http://localhost:3000/shoping');
+        const shopingData = await response.json();
+        
+        displayShopingData(shopingData);
+    } catch (error) {
+        console.error('Error fetching shoping data:', error);
+    }
+}
+
+// Display shoping data on the webpage
+function displayShopingData(shopingData) {
+    const shopingDataContainer = document.getElementById('shopingData');
+    
+    shopingData.forEach(item => {
+        const itemDiv = document.createElement('div');
+        itemDiv.classList.add('shoping-item');
+
+        const itemId = document.createElement('p');
+        itemId.textContent = `ID: ${item.id}`;
+
+        const itemPrice = document.createElement('p');
+        itemPrice.textContent = `Price: ${item.price}`;
+
+        const itemColor = document.createElement('p');
+        itemColor.textContent = `Color: ${item.color}`;
+
+        const itemImage = document.createElement('img');
+        itemImage.src = `data:image/jpeg;base64,${btoa(
+            new Uint8Array(item.image.data).reduce(
+                (data, byte) => data + String.fromCharCode(byte),
+                ''
+            )
+        )}`;
+        itemImage.alt = item.color;
+
+        itemDiv.appendChild(itemId);
+        itemDiv.appendChild(itemPrice);
+        itemDiv.appendChild(itemColor);
+        itemDiv.appendChild(itemImage);
+
+        shopingDataContainer.appendChild(itemDiv);
+    });
+}
+
+// Call the function to fetch shoping data when the page loads
+window.onload = fetchShopingData;
