@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+    <div id="mySidenav" class="sidenav">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        <a href="index.html">Home</a>
+        <a href="kidswear.html">Kids Wear</a>
+        <a href="Traditional.html">Traditional</a>
+        <a href="Casuals.html">Casuals</a>
+        <a href="Dresses.html">Dresses</a>
+        <a href="Sarees.html">Sarees</a>
+        <a href="Night.html">Night</a>
+        <a href="cart.html">My Cart</a>
+      </div>
+
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+      
+      <span onclick="openNav()"><button class="btn"><i class="fa fa-bars"></i></button>
+      </span>
+      
+      <div id="main">
+      
+      </div>
+      
+  
+      <center><h1>MY CART</h1></center>
+      <link rel="stylesheet" href="style.css">
+      <div id="cartItems"></div>
+      <div id="total">
+      <p>Total Items in Cart: <span id="totalItems"></span></p>
+      <p>Total Price: Rs.<span id="totalPrice"></span></p></div>
+      <script>
+          function openNav() {
+          document.getElementById("mySidenav").style.width = "250px";
+        }
+        
+        function closeNav() {
+          document.getElementById("mySidenav").style.width = "0";
+        }
+        
+     
+        
+
+ 
+        // Retrieve cart items from session storage
+        var cartItems = JSON.parse(sessionStorage.getItem('cartItems')) || [];
+        
+        // Function to display cart items
+        function displayCartItems() {
+            var cartItemsDiv = document.getElementById('cartItems');
+            var itemHTML = '';
+            cartItems.forEach(function(item) {
+                if (item.quantity > 0) {
+                    itemHTML += `
+                        <div>
+                            <img src="${item.image}" alt="${item.name}" style="width:100px;height:100px;">
+                            <p>${item.name} at <b>Rs.${item.price}</b> (Quantity: <span id="quantity_${item.name}">${item.quantity}</span>) 
+                            <button onclick="removeItem('${item.name}')">Remove</button></p>
+                        </div>
+                    `;
+                }
+            });
+            cartItemsDiv.innerHTML = itemHTML;
+        }
+
+        // Display cart items on page load
+        displayCartItems();
+
+        // Display total number of items and total price in cart
+        var totalItemsSpan = document.getElementById('totalItems');
+        var totalPriceSpan = document.getElementById('totalPrice');
+        totalItemsSpan.textContent = calculateTotalItems(cartItems);
+        totalPriceSpan.textContent = calculateTotalPrice(cartItems);
+
+        // Function to calculate total number of items in cart
+        function calculateTotalItems(cartItems) {
+            var totalItems = 0;
+            cartItems.forEach(function(item) {
+                totalItems += item.quantity;
+            });
+            return totalItems;
+        }
+
+        // Function to calculate total price of items in cart
+        function calculateTotalPrice(cartItems) {
+            var totalPrice = 0;
+            cartItems.forEach(function(item) {
+                totalPrice += item.price * item.quantity;
+            });
+            return totalPrice;
+        }
+
+        // Function to remove an item from the cart
+        function removeItem(itemName) {
+            // Find the item index in the cart
+            var itemIndex = cartItems.findIndex(function(item) {
+                return item.name === itemName;
+            });
+
+            if (itemIndex !== -1) {
+                // Decrease the quantity of the item by 1
+                cartItems[itemIndex].quantity--;
+
+                // Remove the item from the cart if its quantity becomes 0
+                if (cartItems[itemIndex].quantity === 0) {
+                    cartItems.splice(itemIndex, 1);
+                }
+
+                // Update session storage with the modified cart
+                sessionStorage.setItem('cartItems', JSON.stringify(cartItems));
+
+                // Update the cart items displayed
+                displayCartItems();
+
+                // Update the total number of items and total price displayed
+                totalItemsSpan.textContent = calculateTotalItems(cartItems);
+                totalPriceSpan.textContent = calculateTotalPrice(cartItems);
+            }
+        }
+        </script>
+        
+</body>
+</html>
